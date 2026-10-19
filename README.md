@@ -45,9 +45,14 @@ still tell you about the machine.
 ## Requirements
 
 - CTFd 3.8 or newer
-- `prometheus-client`, pinned in `ctfd_metrics/requirements.txt`
+- `prometheus-client` 0.14 or newer, which is where `registry.Collector`
+  appeared. Declared as a range rather than a pin, since this installs into
+  someone else's CTFd environment; pin it in your own deployment if you want
+  reproducible restarts.
 
-Tested against CTFd 3.8.8 on MariaDB, in both users and teams mode.
+Tested against CTFd 3.8.8 on MariaDB, in both users and teams mode, and
+against `prometheus-client` 0.14.0 and 0.26.0 — the metric output is
+identical on both.
 
 ## Install
 
@@ -68,7 +73,7 @@ volumes:
 
 Install `prometheus-client` into the same environment as CTFd, then restart
 it. CTFd's official image installs each plugin's `requirements.txt` if its
-entrypoint is set up to, otherwise add the pin to your own image.
+entrypoint is set up to, otherwise add the dependency to your own image.
 
 ## Configuration
 
@@ -263,6 +268,23 @@ admin browsing to `/metrics` has to come from an allowed address too.
   out of those at once, and in teams mode their team has to be a player too.
   A user with no team gets no series there, since in teams mode they cannot
   submit anything anyway.
+
+## Layout
+
+One module per metric section, so adding a metric means touching the file
+that owns it rather than scrolling one long one:
+
+| Module | Holds |
+| --- | --- |
+| `__init__.py` | `load(app)` and the `/metrics` view |
+| `auth.py` | who may scrape |
+| `collector.py` | the collector composing the sections below |
+| `ctf.py` | versions, pause state, configured times |
+| `challenges.py` | points, solves, wrong guesses, hint unlocks |
+| `accounts.py` | the account census and the scoreboard |
+| `users.py` | per-user submission activity |
+| `submissions.py` | submission totals |
+| `common.py` | the player filter and small shared helpers |
 
 ## License
 
