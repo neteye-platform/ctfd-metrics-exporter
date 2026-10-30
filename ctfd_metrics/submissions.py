@@ -1,5 +1,3 @@
-"""Submission totals across the whole CTF."""
-
 from CTFd.models import Submissions, db
 from CTFd.utils.modes import get_model
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
@@ -23,10 +21,6 @@ def submission_metrics():
         "Flag submissions from player accounts, by result.",
         labels=["result"],
     )
-    # correct and incorrect are always emitted, so a dashboard does not have
-    # to cope with a series that only appears once the CTF gets going. A
-    # challenge plugin is free to record other result types; pass those
-    # through rather than dropping them.
     for result in sorted({"correct", "incorrect"} | {r for r in by_result if r}):
         submissions.add_metric([result], by_result.get(result, 0))
 
