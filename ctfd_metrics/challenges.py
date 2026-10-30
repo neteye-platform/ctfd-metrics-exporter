@@ -1,5 +1,3 @@
-"""Per-challenge metrics: points, solves, wrong guesses and hint unlocks."""
-
 from collections import defaultdict
 
 from CTFd.models import Challenges, Hints, Solves, Submissions, Unlocks, db
@@ -12,10 +10,7 @@ from .common import players
 def challenge_metrics():
     model = get_model()
 
-    # Base-table columns only: loading whole Challenges objects would drag
-    # in every challenge-type subclass table a plugin has registered, which
-    # a scrape has no use for. `value` is a plain column that CTFd rewrites
-    # as dynamic challenges decay, so it is already the current price.
+    # Columns only: whole objects join every challenge-type table
     challenges = (
         db.session.query(
             Challenges.id,
@@ -36,10 +31,7 @@ def challenge_metrics():
         .all()
     )
 
-    # Fails has no table of its own — wrong submissions are rows of
-    # `submissions` told apart by the type discriminator — and selecting
-    # bare columns off it would not add that discriminator to the SQL. So
-    # filter on the type explicitly instead of querying Fails.
+    # Fails has no table, and bare columns skip its type filter
     wrong = dict(
         db.session.query(Submissions.challenge_id, db.func.count(Submissions.id))
         .join(model, Submissions.account_id == model.id)
@@ -48,8 +40,6 @@ def challenge_metrics():
         .all()
     )
 
-    # Unlocks.target holds the hint id, so the challenge it belongs to only
-    # comes out of the join with Hints.
     hint_unlocks = dict(
         db.session.query(Hints.challenge_id, db.func.count(Unlocks.id))
         .select_from(Unlocks)

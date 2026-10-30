@@ -1,5 +1,3 @@
-"""The account census and the scoreboard."""
-
 from CTFd.models import Teams, Users, db
 from CTFd.utils.scores import get_standings
 from prometheus_client.core import GaugeMetricFamily
@@ -8,12 +6,7 @@ from .common import top_accounts
 
 
 def _state_counts(model, *criteria):
-    """Group accounts into active / hidden / banned.
-
-    The two flags are independent in the database, so the buckets are made
-    exclusive here — banned wins over hidden — which lets a dashboard sum
-    over the label to get the registered total.
-    """
+    # Exclusive buckets: banned wins over hidden
     rows = (
         db.session.query(model.banned, model.hidden, db.func.count(model.id))
         .filter(*criteria)
@@ -54,10 +47,7 @@ def account_metrics():
     admins = GaugeMetricFamily("ctfd_admin_users", "Users holding the admin role.")
     admins.add_metric([], Users.query.filter(Users.type == "admin").count())
 
-    # admin=True is the only variant of the standings that ignores the
-    # scoreboard freeze *and* reports the hidden/banned flags, so the player
-    # filter can be applied here rather than being traded for the freeze.
-    # CTFd memoizes this for 60s, so a faster scrape interval buys nothing.
+    # admin=True ignores the freeze and exposes hidden/banned
     standings = [
         row for row in get_standings(admin=True) if not row.hidden and not row.banned
     ]
@@ -73,7 +63,6 @@ def account_metrics():
         "Score of a player account, ignoring the scoreboard freeze.",
         labels=["account_id", "name"],
     )
-    # Already ordered best first by get_standings, so the cap keeps the top.
     for row in standings[: top_accounts()]:
         score.add_metric([str(row.account_id), row.name or ""], row.score or 0)
 

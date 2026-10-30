@@ -1,5 +1,3 @@
-"""CTF-level metrics: versions, pause state and the configured times."""
-
 from CTFd.utils import get_config
 from CTFd.utils.config import ctf_theme
 from prometheus_client.core import GaugeMetricFamily
@@ -32,9 +30,7 @@ def ctf_metrics():
 
     metrics = [build, paused]
 
-    # These three are simply unset until an organizer fills them in. Drop
-    # the series in that case: a 0 would render as 1970 on a dashboard and
-    # read as a misconfigured CTF rather than an unconfigured one.
+    # Unset times emit nothing: 0 would plot as 1970
     for key, description in (
         ("start", "Configured CTF start time"),
         ("end", "Configured CTF end time"),

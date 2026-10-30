@@ -1,21 +1,3 @@
-"""Prometheus metrics for CTFd.
-
-Adds an authenticated ``GET /metrics`` endpoint serving the Prometheus text
-exposition format. Every value is read from the CTFd database while the
-scrape is being answered, so the plugin keeps no counters of its own: it
-needs no warm-up, it cannot drift from the database, and it stays correct
-with more than one gunicorn worker, where in-process counters would each
-hold a different partial view.
-
-The endpoint reports the *unfrozen* truth, hidden accounts and all, which
-is what organizers need and exactly what players must not see. It is
-therefore closed unless the scraper proves itself, see ``auth.authorized``.
-
-The metrics themselves live in one module per section — ``ctf``,
-``challenges``, ``accounts``, ``users``, ``submissions`` — which
-``collector`` composes.
-"""
-
 from CTFd.models import db
 from flask import Response
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
@@ -30,10 +12,7 @@ METRICS_PATH = "/metrics"
 
 
 def load(app):
-    # A registry of our own rather than the process-wide default one, which
-    # would also serve the interpreter's own process and GC metrics. Those
-    # describe one gunicorn worker picked at random per scrape, so they
-    # would be noise here.
+    # Not the default registry: its process metrics are per gunicorn worker
     registry = CollectorRegistry()
     registry.register(CTFdCollector())
 
@@ -56,9 +35,7 @@ def load(app):
         try:
             payload = generate_latest(registry)
         finally:
-            # A scrape only reads, so end its transaction instead of leaving
-            # one open with a stale snapshot for the next request on this
-            # connection to inherit.
+            # Don't leave a stale read snapshot to the next request
             db.session.close()
 
         return Response(payload, content_type=CONTENT_TYPE_LATEST)
